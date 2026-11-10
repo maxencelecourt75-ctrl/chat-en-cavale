@@ -1,6 +1,6 @@
 // Service worker : cache-first, jeu entièrement hors ligne.
 // Pour publier une mise à jour, change simplement le numéro de VERSION.
-const VERSION = 'v1';
+const VERSION = 'v4';
 const CACHE = 'chat-en-cavale-' + VERSION;
 const FILES = ['./', './index.html', './manifest.webmanifest', './fonts/press-start-2p.woff2',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
