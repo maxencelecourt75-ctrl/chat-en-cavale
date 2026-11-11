@@ -1,7 +1,7 @@
 {
   "name": "Chat en cavale",
   "short_name": "Chat en cavale",
-  "description": "Puzzle rétro pixel art : ramène le chat au panier sans te faire attraper.",
+  "description": "Puzzle rétro pixel art : aide le chat à s'échapper sans te faire attraper.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
