@@ -2,10 +2,10 @@
 // La page (index.html) passe d'abord par le réseau pour recevoir les mises à jour tout de suite,
 // puis se rabat sur le cache hors ligne. Le reste (police, icônes) est servi depuis le cache.
 // Pour publier une mise à jour, change le numéro de VERSION.
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = 'chat-en-cavale-' + VERSION;
 const FILES = ['./', './index.html', './manifest.webmanifest', './fonts/press-start-2p.woff2',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
+  './icons/favicon-32.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
