@@ -191,6 +191,7 @@ b{font-weight:400}
 .controls{align-items:center}.controls .btn{flex:1}
 .controls #lives{display:inline-flex;gap:3px;padding:0 4px;flex:none}.controls #lives:empty{display:none}
 #pips .ico{width:18px;height:18px}
+#opt.bump{animation:optbump .5s steps(4)}@keyframes optbump{0%{color:#FFD25A;scale:1.5}100%{scale:1}}
 .setbox{gap:10px}.setrow{display:flex;align-items:center;gap:10px;justify-content:flex-start}.setrow em{margin-left:auto;font-style:normal;color:var(--success)}.setrow em.off{color:var(--dim)}
 .misslist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
 .missrow{display:flex;align-items:center;gap:10px;justify-content:flex-start;padding:8px 10px}
@@ -745,12 +746,12 @@ function bonusAt(level){
   return null;
 }
 // emplacements pré-calculés (niveaux fixes) : détour de 2 coups environ pour l'étoile, 1 à 2 pour le bonus
-const ITEMS={"3":{"s":[6,4]},"4":{"s":[5,5]},"6":{"s":[4,7]},"7":{"s":[4,7]},"8":{"s":[7,0]},"10":{"b":["yarn",5,5],"s":[8,5]},"11":{"s":[9,6]},"12":{"b":["shadow",6,4],"s":[4,5]},"13":{"s":[4,1]},"14":{"s":[8,6]},"16":{"s":[4,7]},"17":{"s":[5,0]},"18":{"b":["catnip",9,3],"s":[7,7]},"20":{"b":["shadow",1,4],"s":[8,7]},"21":{"b":["shadow",8,2],"s":[6,3]},"22":{"s":[9,4]},"23":{"s":[7,4]},"24":{"b":["yarn",5,6],"s":[8,5]},"26":{},"27":{"b":["catnip",9,1],"s":[4,1]},"28":{"s":[2,7]},"30":{"b":["catnip",8,6],"s":[1,7]}};
+const ITEMS={"3":{"s":[6,4],"o":9},"4":{"s":[5,5],"o":10},"6":{"s":[4,7],"o":12},"7":{"s":[4,7],"o":10},"8":{"s":[7,0],"o":13},"10":{"b":["yarn",5,5],"s":[8,5],"o":16},"11":{"s":[9,6],"o":14},"12":{"b":["shadow",6,4],"s":[4,5],"o":14},"13":{"s":[4,1],"o":14},"14":{"s":[8,6],"o":14},"16":{"s":[4,7],"o":15},"17":{"s":[5,0],"o":16},"18":{"b":["catnip",9,3],"s":[7,7],"o":16},"20":{"b":["shadow",1,4],"s":[8,7],"o":15},"21":{"b":["shadow",8,2],"s":[6,3],"o":16},"22":{"s":[9,4],"o":17},"23":{"s":[7,4],"o":15},"24":{"b":["yarn",5,6],"s":[8,5],"o":17},"26":{},"27":{"b":["catnip",9,1],"s":[4,1],"o":17},"28":{"s":[2,7],"o":19},"30":{"b":["catnip",8,6],"s":[1,7],"o":20}};
 function placeItems(L,level){
-  L.star=null;L.bonus=null;
+  L.star=null;L.bonus=null;L.optStar=0;
   if(level<3||isBreather(level))return L;
   const T=ITEMS[level],ok=q=>q&&inb(q[0],q[1])&&!L.block[q[0]][q[1]]&&!L.hide[q[0]][q[1]]&&!sameP(q,L.catStart)&&!sameP(q,L.basket)&&!L.patrols.some(pt=>pt.some(x=>sameP(x,q)));
-  if(T&&(!T.s||ok(T.s))&&(!T.b||ok(T.b.slice(1)))){if(T.b)L.bonus={t:T.b[0],p:T.b.slice(1)};if(T.s)L.star=T.s;if((!L.bonus||solve(L,L.opt+4,1)>0)&&(!L.star||solve(L,L.opt+5,2)>0))return L;L.star=null;L.bonus=null;}
+  if(T&&(!T.s||ok(T.s))&&(!T.b||ok(T.b.slice(1)))){if(T.b)L.bonus={t:T.b[0],p:T.b.slice(1)};if(T.s){L.star=T.s;L.optStar=T.o||0;}if((!L.bonus||solve(L,L.opt+4,1)>0)&&(!L.star||solve(L,L.opt+5,2)>0))return L;L.star=null;L.bonus=null;}
   const rng=mulberry32(level*104729+17),opt=L.opt;
   const free=[];
   for(let r=0;r<H;r++)for(let c=0;c<W;c++){const q=[r,c];
@@ -763,6 +764,7 @@ function placeItems(L,level){
   const bt=bonusAt(level);
   if(bt)pick(q=>{L.bonus=q?{t:bt,p:q}:null;},1,opt+1,opt+3,14);
   pick(q=>{L.star=q;},2,opt+2,opt+4,14);
+  if(L.star){const b=L.bonus;L.bonus=null;L.optStar=solve(L,opt+8,2);L.bonus=b;if(L.optStar<0)L.optStar=solve(L,opt+8,2);}
   return L;
 }
 function generate(level,seed,noHide){
@@ -800,7 +802,8 @@ const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save
 const put = (el, [r, c]) => el.style.transform = `translate(${c * 100}%, ${r * 100}%)`;
 const starStr = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const PAR_MARGIN = 2, MAX_STARS = 2;
-const par = () => L.opt + PAR_MARGIN;
+// objectif : si l'étoile de la carte est ramassée, il passe au chemin le plus court qui passe par l'étoile
+const par = () => (L.optStar > 0 && state && state.fx && (state.fx.g & 2) ? L.optStar : L.opt) + PAR_MARGIN;
 const starsFor = m => m < par() ? 2 : m === par() ? 1 : 0;
 const starIcons = (n, lg, tot = 2) => Array.from({ length: tot }, (_, i) => i).map(i => `<i class="ico star${lg ? ' lg' : ''}${i < n ? '' : ' off'}"></i>`).join('');
 
@@ -815,7 +818,7 @@ function intro(lv) {
   if (!daily && lv === 20) return 'BOSS : le Capitaine du port. S\'il te repère, il siffle et l\'autre agent fonce vers toi !' + bn;
   if (!daily && lv === 30) return 'BOSS FINAL : le Commandant. Il voit loin et, s\'il te repère, il court 2 cases par tour. Cache-toi !' + bn;
   if (isBreather(lv)) return 'Niveau repos. Souffle un peu.';
-  if (lv === 3) return 'Nouveau : une étoile sur la carte ! Ramasse-la pour +1★, mais le détour coûte des coups.';
+  if (lv === 3) return 'Nouveau : une étoile sur la carte ! Ramasse-la pour +1★ : l\'objectif de coups s\'allonge pour compter le détour.';
   if (bn) return ({ yarn: 'Bonus : pelote de laine. Ramasse-la, puis lance-la jusqu\'à 4 cases pour attirer les agents.', catnip: 'Bonus : herbe à chat. Ramasse-la, puis utilise-la quand tu veux pour sprinter 3 coups.', shadow: 'Bonus : ombre. Ramasse-la, puis utilise-la quand tu veux pour être invisible 3 coups.' })[L.bonus.t];
   return 'Mène le chat à la sortie sans te faire attraper.';
 }
@@ -1182,6 +1185,8 @@ function draw() {
   const mb = document.getElementById('movebar');
   mb.classList.toggle('mid', moves === par());
   mb.classList.toggle('over', moves > par());
+  const optEl = document.getElementById('opt'), pv = String(par());
+  if (optEl.textContent !== pv) { optEl.textContent = pv; optEl.classList.remove('bump'); void optEl.offsetWidth; optEl.classList.add('bump'); }
   const bonusStar = (state.fx && state.fx.g & 2) ? 1 : 0;
   const pot = starsFor(moves + 1) + bonusStar;
   document.getElementById('pips').innerHTML = starIcons(pot, false, L.star ? 3 : 2);
@@ -1330,7 +1335,7 @@ function move(d) {
     else setTimeout(showCaught, 650);
   } else if ((n.fx.g & ~prevFx.g) !== 0) {
     const gotStar = (n.fx.g & 2) && !(prevFx.g & 2);
-    msg.textContent = gotStar ? 'Étoile ramassée : +1★ à l\'arrivée !' : {
+    msg.textContent = gotStar ? `Étoile ramassée : +1★ à l'arrivée ! Nouvel objectif : ${par()} coups.` : {
       catnip: 'Herbe à chat dans ta poche ! Utilise-la quand tu veux : 2 cases par coup pendant 3 coups.',
       shadow: 'Ombre dans ta poche ! Utilise-la quand tu veux : invisible pendant 3 coups.',
       yarn: 'Pelote dans ta poche ! Lance-la jusqu\'à 4 cases pour attirer les agents.'
